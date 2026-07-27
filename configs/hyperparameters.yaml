@@ -1,0 +1,90 @@
+# DMZ-FL Hyperparameter Configuration
+# ======================================
+# Model architectures and training hyperparameters
+
+# --- Federated Learning ---
+fl:
+  num_clients: 100
+  num_rounds: 100
+  local_epochs: 5
+  batch_size: 64
+  learning_rate: 0.01
+  proximal_mu: 0.005        # lighter than FedProx (0.01)
+
+# --- Dataset & Model ---
+datasets:
+  fashion_mnist:
+    model: CNN2
+    params: 582K
+    input_size: [28, 28]
+    num_classes: 10
+  veremi:
+    model: MLP3
+    params: ~20K
+    input_dim: 9
+    num_classes: 5
+  can_multi:
+    model: MLP3
+    params: 9.5K
+    input_dim: 4
+    num_classes: 4
+
+# --- Bulletproofs ZKP ---
+bulletproofs:
+  gradient_components: 128
+  quantization_bits: 16
+  norm_bound_cnn2: 15.0      # model-adaptive
+  norm_bound_resnet18: 50.0
+  curve: Curve25519
+  library: pybulletproofs (dalek-cryptography)
+  per_proof_verify_ms: 3.2   # measured, see Table 6
+  per_proof_generate_ms: 6.5 # measured
+
+# --- DAG Consensus ---
+dag:
+  mcmc_walk_steps: 10        # L
+  mcmc_bias: 0.5             # beta
+  optimistic_depth: 10       # K
+  final_depth: 60            # K_final
+  genesis_weight: 1.0
+
+# --- MAPPO Client Selection ---
+mappo:
+  ctdr_architecture: CTDE
+  actor_network: MLP[128, 64]
+  critic_network: MLP[256, 128]
+  ppo_clip_epsilon: 0.2
+  gamma: 0.99
+  gae_lambda: 0.95
+  kl_target: 0.015
+  exploration_epsilon: 0.2
+  selection_ratio: 0.7       # K/N
+
+# --- Reputation ---
+reputation:
+  warmup_rounds: 5
+  ema_decay: 0.9
+  exploration_epsilon: 0.1
+  rollback_threshold: -0.3   # cosine similarity
+  rollback_penalty: -0.10
+
+# --- PBFT Consensus ---
+pbft:
+  rsu_count: 7               # M
+  byzantine_tolerance: "f < M/3"
+  message_complexity: "O(M^2)"
+  latency_ms: 1500           # reference value
+
+# --- Attacks (Evaluation) ---
+attacks:
+  sign_flip: "g -> -g"
+  gradient_scaling: "g -> 10g"
+  label_flipping: "y -> y + floor(C/2) mod C"
+  malicious_ratios: [0.0, 0.10, 0.20, 0.30]
+
+# --- Reproducibility ---
+reproducibility:
+  seeds: [42, 142, 242]
+  runs_per_config: 3
+  hardware: "2x NVIDIA RTX 4090D, 48GB VRAM, Ubuntu 22.04"
+  pytorch_version: "2.2.1"

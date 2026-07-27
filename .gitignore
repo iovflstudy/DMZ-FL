@@ -1,0 +1,42 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+
+# --- Data & Models ---
+*.pth
+*.pt
+*.h5
+*.pkl
+*.npz
+data/
+datasets/
+checkpoints/
+
+# --- Output ---
+*.pdf
+*.png
+*.jpg
+*.log
+*.aux
+*.bbl
+*.blg
+*.out
+*.toc
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Private ---
+core_algorithms/
+training/
