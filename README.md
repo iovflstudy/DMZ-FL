@@ -65,6 +65,3 @@ python demo.py          # no PyTorch / dataset / ZKP library required
 - FLTrust — Cao et al., Byzantine-Robust Federated Learning via Trust Bootstrapping, NDSS 2021.
 - Bulletproofs — Bunz et al., 2018.
 
-## Citation
-
-Cite the corresponding DMZ-FL paper (JSA revision).
