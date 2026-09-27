@@ -1,5 +1,7 @@
 # DMZ-FL: Decentralized, verifiable, adaptive federated learning for vehicular networks
 
+> Source code: https://github.com/iovflstudy/DMZ-FL
+
 DMZ-FL integrates a **Tangle-style DAG ledger**, **Bulletproofs zero-knowledge
 gradient-norm proofs**, **MAPPO dynamic client selection**, and a **PBFT RSU
 consortium** into a closed defense loop (verification -> reputation ->
@@ -42,8 +44,8 @@ python demo.py          # no PyTorch / dataset / ZKP library required
 | Dataset | Model | Norm bound B | Link |
 |---|---|---|---|
 | Fashion-MNIST | CNN2 | 15 | https://github.com/zalandoresearch/fashion-mnist |
-| VeReMi | MLP3 | 5 | https://veremi-dataset.github.io/ |
-| Car-Hacking | MLP3 | 5 | https://www.unb.ca/cic/datasets/car-hacking-2019.html |
+| VeReMi | MLP3 | 5 | https://github.com/josephkamel/VeReMi-Dataset |
+| Car-Hacking | MLP3 | 5 | https://ocslab.hksecurity.net/Datasets/car-hacking-dataset |
 
 ## Cryptography backends
 
