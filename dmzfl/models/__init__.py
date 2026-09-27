@@ -1,0 +1,1 @@
+"""Model zoo: CNN2 (Fashion-MNIST), MLP3 (VeReMi / Car-Hacking)."""

@@ -1,90 +1,103 @@
-# DMZ-FL Hyperparameter Configuration
-# ======================================
-# Model architectures and training hyperparameters
+# DMZ-FL Hyperparameters  (aligned with the JSA revised manuscript)
+# ====================================================================
 
-# --- Federated Learning ---
 fl:
-  num_clients: 100
+  num_clients: 100          # N
+  selected_per_round: 70     # N_s
   num_rounds: 100
   local_epochs: 5
   batch_size: 64
   learning_rate: 0.01
   proximal_mu: 0.005        # lighter than FedProx (0.01)
 
-# --- Dataset & Model ---
 datasets:
   fashion_mnist:
     model: CNN2
-    params: 582K
+    norm_bound_B: 15.0
     input_size: [28, 28]
     num_classes: 10
   veremi:
     model: MLP3
-    params: ~20K
-    input_dim: 9
+    norm_bound_B: 5.0
     num_classes: 5
-  can_multi:
+  car_hacking:
     model: MLP3
+    norm_bound_B: 5.0
     params: 9.5K
-    input_dim: 4
     num_classes: 4
 
-# --- Bulletproofs ZKP ---
-bulletproofs:
-  gradient_components: 128
-  quantization_bits: 16
-  norm_bound_cnn2: 15.0      # model-adaptive
-  norm_bound_resnet18: 50.0
-  curve: Curve25519
-  library: pybulletproofs (dalek-cryptography)
-  per_proof_verify_ms: 3.2   # measured, see Table 6
-  per_proof_generate_ms: 6.5 # measured
+quantization:                # applied to gradient updates before the range proof
+  conv_bits: 8
+  fc_bits: 12
+  quantize_biases: false
 
-# --- DAG Consensus ---
+bulletproofs:
+  # Range proof over the quantized gradient update; no single component is revealed.
+  norm_bound: "model-adaptive (CNN2=15, MLP3=5)"
+  curve: Ristretto / curve25519-dalek
+  library: "pybulletproofs==0.1.0.dev7 (PyO3 binding of dalek-cryptography Rust bulletproofs)"
+  trusted_setup: false
+  proof_aggregation: false    # per-client proof; batching config reported in Table
+  measured:
+    prove_ms_per_proof: 6.5
+    verify_ms_per_proof: 3.2
+    proof_bytes: 640          # TODO: confirm against dalek implementation on Linux
+  transaction_bytes:
+    commitment: 32
+    proof: 640
+    metadata: 92
+    total: 764                # w_local is OFF-chain, not included
+
 dag:
   mcmc_walk_steps: 10        # L
   mcmc_bias: 0.5             # beta
-  optimistic_depth: 10       # K
-  final_depth: 60            # K_final
-  genesis_weight: 1.0
+  mcmc_tips: 2               # k
+  optimistic_depth: 10       # K  -> forgery prob ~8.4e-4 at p_h=0.67
+  final_depth: 60             # K_final -> forgery prob ~3.4e-19
+  honest_prop: 0.67          # p_h
+  byzantine_prop: 0.33       # alpha
+  aggregation_window: 6       # T_w rounds
+  output_interval: 5          # metrics reported per 5 rounds (NOT per 1 round)
 
-# --- MAPPO Client Selection ---
 mappo:
-  ctdr_architecture: CTDE
-  actor_network: MLP[128, 64]
-  critic_network: MLP[256, 128]
-  ppo_clip_epsilon: 0.2
+  architecture: CTDE
+  actor: [128, 64]
+  critic: [256, 128]
+  ppo_clip: 0.2
   gamma: 0.99
   gae_lambda: 0.95
-  kl_target: 0.015
-  exploration_epsilon: 0.2
-  selection_ratio: 0.7       # K/N
+  target_kl: 0.015
+  grad_clip: 10.0
+  rollout_buffer: 4096
+  update_every_rounds: 10
+  no_improve_patience: 5
+  reward_norm_target: 0.3333  # exp(-3*| ||g||/B - 1/3 |), scale-invariant
 
-# --- Reputation ---
 reputation:
-  warmup_rounds: 5
-  ema_decay: 0.9
-  exploration_epsilon: 0.1
-  rollback_threshold: -0.3   # cosine similarity
-  rollback_penalty: -0.10
+  initial: 0.5
+  warmup_rounds: 5           # reward-only during warmup
+  ema_decay: 0.95             # gamma
+  reward_delta: 0.03          # delta+ on passing
+  penalty_delta: -0.03        # delta- on failing
+  rollback_penalty: -0.10     # extra penalty on rollback
+  clamp: [0.0, 1.0]
+  epsilon_greedy: 0.2         # exploration after rollback
+  cosine_threshold: -0.3      # angle > 107.5 deg, directional poisoning detection
 
-# --- PBFT Consensus ---
 pbft:
   rsu_count: 7               # M
-  byzantine_tolerance: "f < M/3"
-  message_complexity: "O(M^2)"
-  latency_ms: 1500           # reference value
+  byzantine_tolerance: "f_R < M/3"
+  master_election_rounds: 20
+  message_complexity: "O(M^2) = 49 msgs/block"
+  vote_timeout_ms: 500
 
-# --- Attacks (Evaluation) ---
 attacks:
-  sign_flip: "g -> -g"
-  gradient_scaling: "g -> 10g"
-  label_flipping: "y -> y + floor(C/2) mod C"
+  sign_flip: "g -> -g"          # direction attack: cosine + reputation + rollback
+  gradient_scaling: "g -> 10g"  # amplitude attack: rejected by Bulletproofs norm bound
+  label_flipping: "y -> (y + floor(C/2)) mod C"
   malicious_ratios: [0.0, 0.10, 0.20, 0.30]
 
-# --- Reproducibility ---
 reproducibility:
   seeds: [42, 142, 242]
   runs_per_config: 3
-  hardware: "2x NVIDIA RTX 4090D, 48GB VRAM, Ubuntu 22.04"
-  pytorch_version: "2.2.1"
+  hardware: "2x RTX 4090D, 56GB RAM, Ubuntu 22.04, PyTorch 2.2.1"

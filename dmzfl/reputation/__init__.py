@@ -1,0 +1,1 @@
+"""EMA reputation, cosine directional detection, majority rollback (Sec. 4)."""

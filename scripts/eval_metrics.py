@@ -73,10 +73,11 @@ ATTACK_RESULTS_LABELFLIP_30 = {
     'FedAvg':      0.7659,
 }
 
-# Ablation study (30% Sign-Flip, Fashion-MNIST)
+# Ablation study (30% Gradient Scaling, Fashion-MNIST, matches Fig. 8)
+# full / -ZKP / -MAPPO / -Reputation
 ABLATION_RESULTS = {
-    'DMZ-FL (full)': 0.8622,
-    '-ZKP':          0.8408,
-    '-MAPPO':        0.8382,
-    '-Reputation':   0.8392,
+    'DMZ-FL (full)': 0.8410,
+    '-ZKP':          0.8214,
+    '-MAPPO':        0.8372,
+    '-Reputation':   0.8395,
 }

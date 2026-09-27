@@ -1,0 +1,1 @@
+def load_fashion_mnist(): raise NotImplementedError  # returns train/test Datasets

@@ -1,0 +1,19 @@
+# Discrete-event simulation: DAG Tangle vs. traditional block-based ledger
+# All metrics sampled per 5 rounds (NOT averaged over a checkpoint and labeled
+# as per-1-round), matching the reviewer-requested matched-simulation setup.
+sim:
+  duration_rounds: 100
+  clients: 100
+  selected_per_round: 70
+  sampling_interval_rounds: 5
+dag:
+  tip_selection: MCMC
+  L: 10
+  beta: 0.5
+  k: 2
+  K_optimistic: 10
+  K_final: 60
+block_based:
+  block_interval_rounds: 5
+  max_txs_per_block: 100
+  rsu_consensus: PBFT(M=7)

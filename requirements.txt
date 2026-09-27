@@ -1,0 +1,9 @@
+# Core
+torch>=2.2.0
+numpy>=1.24
+pyyaml>=6.0
+matplotlib>=3.7
+# ZKP (Linux/WSL only; pybulletproofs ships manylinux wheels, not Windows)
+# pybulletproofs==0.1.0.dev7
+# Simulation / plotting
+pandas>=2.0

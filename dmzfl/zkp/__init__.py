@@ -1,0 +1,1 @@
+"""Bulletproofs norm proof, Pedersen commitment, off-chain channel (paper Sec. 4)."""

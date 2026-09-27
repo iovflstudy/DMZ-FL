@@ -1,0 +1,1 @@
+"""RSU attestation signatures embedded into the transaction payload."""

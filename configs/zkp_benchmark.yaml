@@ -1,0 +1,11 @@
+# Bulletproofs microbenchmark (independent of the 100-round accuracy run)
+backend:
+  real: "pybulletproofs on Linux/WSL"
+  mock: "fixed-latency stub on Windows for development"
+sweep:
+  num_clients: [10, 20, 40, 70, 100]
+  proof_aggregation: false
+report:
+  prove_s: "11,776 proofs over ~168 rounds (independent cumulative microbenchmark)"
+  verify_per_round_ms: 224      # 70 proofs x 3.2 ms
+  share_of_per_round_latency: "<7%"
