@@ -2,43 +2,87 @@
 
 > Source code: https://github.com/iovflstudy/DMZ-FL
 
-DMZ-FL is a vehicular federated learning framework that closes the loop among
-**verification**, **reputation**, **client selection**, and **aggregation** on a
-Tangle-style DAG ledger. It combines a DAG ledger, Bulletproofs zero-knowledge
-gradient-norm proofs, MAPPO dynamic client selection, and a PBFT RSU consortium
-to tolerate Byzantine vehicles without a central aggregation server.
+DMZ-FL is a vehicular federated learning (FL) framework built on a Tangle-style
+DAG ledger. It removes the central aggregation server, protects local updates
+with zero-knowledge gradient-norm proofs, and closes a self-correcting defense
+loop among verification, reputation, client selection, and aggregation for
+Internet-of-Vehicles (IoV) deployments.
 
-## Key ideas
+![DMZ-FL three-layer architecture](results/figures/fig1_architecture.png)
+## Motivation
 
-- **DAG ledger, not a chain.** Vehicle model updates are appended directly to a
-  DAG and confirmed incrementally as they accumulate weight, instead of waiting
-  for a globally sealed block. Throughput tracks the transaction arrival rate.
-- **Gradient-norm proofs, not plaintext gradients.** Each on-chain transaction
-  carries only a Pedersen commitment and a Bulletproofs range proof; the plaintext
-  update is delivered over an encrypted off-chain channel. The proof enforces the
-  norm bound publicly, with no trusted setup.
-- **Closed-loop defense.** Reputation-weighted aggregation, cosine-based
-  directional-poisoning detection, and majority-vote rollback form a
-  self-correcting loop.
-- **MAPPO client selection.** An actor–critic policy selects participating
-  vehicles under the PBFT RSU consortium, removing the centralized policy server.
+Vehicular FL lets vehicles collaboratively train models without sharing raw data,
+but three problems are hard in practice:
 
+1. **Single point of failure.** A central aggregation server is vulnerable and
+   becomes a bottleneck; moving it to a single RSU does not remove it.
+2. **Gradient exposure.** If local updates are published in the clear, an observer
+   that knows the current global model can recover each client's gradient and run
+   model/gradient inversion.
+3. **Byzantine and poisoning clients.** Malicious vehicles can submit sign-flipped,
+   gradient-scaled, or label-flipped updates to distort the global model, and a
+   naive norm check is not enough by itself.
+
+DMZ-FL addresses all three together: a PBFT RSU consortium replaces the central
+server, a DAG ledger lets updates be confirmed asynchronously, and Bulletproofs
+range proofs enforce the gradient-norm bound publicly without revealing the
+update.
+
+## System overview
+
+DMZ-FL ties four components into one loop:
+
+- **DAG ledger (`dmzfl/ledger/`).** Each selected vehicle publishes a transaction
+  that carries only a Pedersen commitment `C`, a Bulletproofs range proof `π`, a
+  hash `H`, the global-model reference, and attestations. The plaintext local
+  model `w_local` is sent over an encrypted off-chain channel and is never stored
+  on the ledger. Transactions are appended to a Tangle DAG and confirmed
+  incrementally by MCMC tip selection and cumulative weight, with no global block
+  to seal.
+- **Bulletproofs verification (`dmzfl/zkp/`).** A 32-bit range proof certifies
+  that the norm slack `B² − ‖g‖²` is non-negative, i.e. the committed gradient is
+  within the public bound `B`, without revealing any gradient component and with
+  no trusted setup. Pedersen commitment binds the proof to the hidden update.
+- **PBFT RSU consortium (`dmzfl/consensus/`).** Seven RSUs run PBFT, elect a
+  master, and collectively attest the DAG entries; they tolerate up to `f_R < M/3`
+  Byzantine RSUs, so norm enforcement is not a single leader's unilateral call.
+- **MAPPO selection + reputation aggregation (`dmzfl/selection/`,
+  `dmzfl/reputation/`).** An actor–critic policy picks participating vehicles;
+  an EMA reputation (fixed point 0.60), posterior cosine checks, and a 2M/3
+  majority-vote rollback punish directional poisoning and roll back bad rounds.
+
+The loop runs as: vehicles train locally → commit + prove → RSU-consensus
+verifies → reputation weights the aggregation → cosine/rollback corrects
+outliers.
+
+## Threat model
+
+| Adversary | Capability | DMZ-FL defense | Goal |
+|---|---|---|---|
+| Byzantine RSU (`< M/3`) | Colludes to manipulate attestations / norm checks | PBFT consensus, publicly verifiable Bulletproofs | Consensus safety/liveness, independent of any single RSU |
+| Malicious vehicle | Adaptive poisoning: Sign-Flip, Gradient Scaling, Label-Flipping; alternates good/bad updates | Bulletproofs norm bound (amplitude), cosine check + EMA reputation + 2M/3 rollback (directional) | Reject amplitude and directional updates |
+| External eavesdropper on DAG | Reads all on-chain transactions | Only `(C, π, H, global ref)` are on-chain; `w_local` goes off-chain | Gradient confidentiality |
+
+The confidentiality guarantee targets external DAG observers, not the authorized
+RSU consortium, which legitimately receives `w_local` off-chain to recover the
+effective gradient. Norm enforcement is publicly auditable by any RSU and
+enforced by the PBFT majority.
 ## Quick start
 
 ```bash
 pip install numpy pyyaml matplotlib
-python demo.py                 # no PyTorch / dataset / ZKP library required
+python demo.py                          # exercises the security primitives, no PyTorch/dataset
 python experiments/run_dag_simulation.py   # DAG vs. block-ledger sweep
-python experiments/run_zkp_benchmark.py     # Bulletproofs range-proof numbers
+python experiments/run_zkp_benchmark.py    # Bulletproofs range-proof numbers
 ```
 
-## Highlights
+## Key results
 
 | What | Result |
 |---|---|
-| Accuracy | Outperforms FedAvg by **5.64 pp** on Fashion-MNIST; ~3× the random baseline on VeReMi |
-| Robustness | Stable under **30%** Sign-Flip / Gradient Scaling / Label-Flipping |
-| ZKP overhead | **2.71 ms** verify, **608 B** proof per client (Curve25519, Ristretto) |
+| Accuracy | Outperforms FedAvg by **5.64 pp** on Fashion-MNIST (CNN2); ~3× the random baseline on VeReMi (MLP3) |
+| Robustness | Stable under **30%** Sign-Flip, Gradient Scaling, and Label-Flipping on all three datasets |
+| ZKP overhead | **2.71 ms** verify and **608 B** proof per client (Curve25519, Ristretto); 70 clients/round ≈ 190 ms, <7% of the 3,229 ms round |
 | DAG throughput | **348 tx / 5 rounds** vs. 104.5 for a block-based ledger |
 | DAG confirmation rate | **93.5%** vs. 29.9% at 70 updates/round |
 | On-chain footprint | **732 B** per transaction; ~2.67 GB/year |
@@ -67,7 +111,8 @@ python experiments/run_zkp_benchmark.py     # Bulletproofs range-proof numbers
 ## Experiment runners
 
 - `experiments/run_dag_simulation.py` — DAG vs. block-based ledger: throughput,
-  confirmation latency, confirmation rate as arrival rate rises.
+  confirmation latency, confirmation rate as the arrival rate rises (30→150
+  tx/round).
 - `experiments/run_zkp_benchmark.py` — Bulletproofs range-proof micro-benchmark
   (prove / verify latency and proof size for m = 1, 8, 32, 70 scalars).
 - `experiments/run_main_accuracy.py` — baseline accuracy on the three datasets.
@@ -79,7 +124,3 @@ python experiments/run_zkp_benchmark.py     # Bulletproofs range-proof numbers
 See [`references/README.md`](references/README.md) for dataset links
 (Fashion-MNIST, VeReMi, Car-Hacking), the dalek-cryptography Rust Bulletproofs
 backend, and baseline papers.
-
-## Citation
-
-If you use this code, please cite the corresponding DMZ-FL manuscript.
