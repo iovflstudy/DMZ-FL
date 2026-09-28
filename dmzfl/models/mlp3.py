@@ -1,6 +1,6 @@
 import torch.nn as nn
 class MLP3(nn.Module):
-    """Three-layer MLP for tabular datasets (VeReMi, Car-Hacking ~9.5K params)."""
+    """Compact three-layer MLP for the tabular datasets (VeReMi, Car-Hacking)."""
     def __init__(self, input_dim, num_classes):
         super().__init__()
         self.net = nn.Sequential(

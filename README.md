@@ -32,16 +32,20 @@ update.
 DMZ-FL ties four components into one loop:
 
 - **DAG ledger (`dmzfl/ledger/`).** Each selected vehicle publishes a transaction
-  that carries only a Pedersen commitment `C`, a Bulletproofs range proof `π`, a
-  hash `H`, the global-model reference, and attestations. The plaintext local
-  model `w_local` is sent over an encrypted off-chain channel and is never stored
-  on the ledger. Transactions are appended to a Tangle DAG and confirmed
+  that carries only a Pedersen commitment `C_n` to the quantized norm slack, a
+  Bulletproofs 32-bit range proof `π`, a hash `H`, the global-model reference,
+  and attestations. The plaintext local model `w_local` (and the blinding factor
+  `r_n`) is sent over an encrypted off-chain channel and is never stored on the
+  ledger. Transactions are appended to a Tangle DAG and confirmed
   incrementally by MCMC tip selection and cumulative weight, with no global block
   to seal.
 - **Bulletproofs verification (`dmzfl/zkp/`).** A 32-bit range proof certifies
   that the norm slack `B² − ‖g‖²` is non-negative, i.e. the committed gradient is
   within the public bound `B`, without revealing any gradient component and with
-  no trusted setup. Pedersen commitment binds the proof to the hidden update.
+  no trusted setup. The scalar commitment `C_n = Commit(n, r_n)` binds the proof;
+  an RSU recomputes the effective slack `n_eff` from the off-chain model and
+  matches `C_n` (binding) under the PBFT honest majority, so an over-norm update
+  cannot be proven for a fake slack.
 - **PBFT RSU consortium (`dmzfl/consensus/`).** Seven RSUs run PBFT, elect a
   master, and collectively attest the DAG entries; they tolerate up to `f_R < M/3`
   Byzantine RSUs, so norm enforcement is not a single leader's unilateral call.
@@ -60,7 +64,7 @@ outliers.
 |---|---|---|---|
 | Byzantine RSU (`< M/3`) | Colludes to manipulate attestations / norm checks | PBFT consensus, publicly verifiable Bulletproofs | Consensus safety/liveness, independent of any single RSU |
 | Malicious vehicle | Adaptive poisoning: Sign-Flip, Gradient Scaling, Label-Flipping; alternates good/bad updates | Bulletproofs norm bound (amplitude), cosine check + EMA reputation + 2M/3 rollback (directional) | Reject amplitude and directional updates |
-| External eavesdropper on DAG | Reads all on-chain transactions | Only `(C, π, H, global ref)` are on-chain; `w_local` goes off-chain | Gradient confidentiality |
+| External eavesdropper on DAG | Reads all on-chain transactions | Only `(C_n, π, H, global ref)` are on-chain; `(w_local, r_n)` go off-chain | Gradient confidentiality |
 
 The confidentiality guarantee targets external DAG observers, not the authorized
 RSU consortium, which legitimately receives `w_local` off-chain to recover the
@@ -71,9 +75,9 @@ enforced by the PBFT majority.
 | Step | Actor | Action | Output |
 |---|---|---|---|
 | 1. Local training | Vehicle | Trains on private data using the latest policy attestation on the DAG | Local update `w_local` |
-| 2. Commit & prove | Vehicle | Builds Pedersen commitment `C = Commit(g, r)` and Bulletproofs range proof `π` certifying the norm bound `‖g‖ ≤ B` | Transaction `(C, π, H, w_global, attestations)` |
-| 3. Publish | Vehicle | Sends the transaction to the DAG; `w_local` goes over an encrypted off-chain channel to the RSU consortium | On-chain `(C, π, H, …)`; off-chain `w_local` |
-| 4. Verify | RSU consortium (PBFT) | Verifies `π`; decrypts `w_local`; recovers `g_eff = w_local − w_global`; cosine check against the current global model | Pass/fail + effective gradient |
+| 2. Commit & prove | Vehicle | Computes slack `n=⌊(B²−‖g‖²)·2³²/B²⌋`, scalar Pedersen `C_n=Commit(n,r_n)`, and a 32-bit range proof `π` for `0≤n<2³²` (equiv. `‖g‖≤B`) | Transaction `(C_n, π, H, w_global, attestations)` |
+| 3. Publish | Vehicle | Sends the transaction to the DAG; `(w_local, r_n)` goes over an encrypted off-chain channel to the RSU consortium | On-chain `(C_n, π, H, …)`; off-chain `(w_local, r_n)` |
+| 4. Verify | RSU consortium (PBFT) | Verifies `π` against `C_n`; decrypts `(w_local, r_n)`, recomputes `g_eff` and slack `n_eff`, requires `Commit(n_eff,r_n)=C_n` and `‖g_eff‖≤B`; then cosine check | Pass/fail + effective gradient |
 | 5. Append & confirm | DAG | MCMC tip selection references the tx; weight accumulates incrementally as more tx arrive; no global block | Confirmed DAG entry |
 | 6. Reputation update | RSU consortium | EMA reputation (fixed point 0.60); cosine anomalies decay reputation; warm-up for new vehicles | Updated reputation scores |
 | 7. Aggregate | RSU consortium | Weighted aggregation by reputation and data volume over verified updates | New global model `w_global` |
@@ -86,7 +90,8 @@ enforced by the PBFT majority.
 pip install numpy pyyaml matplotlib
 python demo.py                          # exercises the security primitives, no PyTorch/dataset
 python experiments/run_dag_simulation.py   # DAG vs. block-ledger sweep
-python experiments/run_zkp_benchmark.py    # Bulletproofs range-proof numbers
+python experiments/run_zkp_benchmark.py    # Bulletproofs range-proof numbers (Python)
+cargo run --release --manifest-path experiments/zkp_bulletproofs/Cargo.toml  # real dalek backend
 ```
 
 ## Key results
@@ -106,7 +111,7 @@ python experiments/run_zkp_benchmark.py    # Bulletproofs range-proof numbers
 |---|---|
 | `dmzfl/ledger/` | DAG Tangle: transaction format, MCMC tip selection, confirmation depths, block-based baseline, storage accounting |
 | `dmzfl/consensus/` | PBFT over M=7 RSUs, master election, attestations |
-| `dmzfl/zkp/` | Pedersen commitment, gradient-norm range proof, real/mock backend, encrypted off-chain channel |
+| `dmzfl/zkp/` | Scalar Pedersen commitment to the norm slack, 32-bit range proof, Rust/mock backend, encrypted off-chain channel |
 | `dmzfl/selection/` | MAPPO actor–critic, replay buffer, reward shaping |
 | `dmzfl/reputation/` | EMA reputation (fixed point 0.60), cosine detection, majority-vote rollback |
 | `dmzfl/aggregators/` | Robust aggregation registry (DMZ-FL + baselines) |
@@ -116,6 +121,7 @@ python experiments/run_zkp_benchmark.py    # Bulletproofs range-proof numbers
 | `dmzfl/models/` | CNN2 (Fashion-MNIST), MLP3 (VeReMi / Car-Hacking) |
 | `datapreprocessor/` | Dataset loaders + IID / Dirichlet non-IID partition |
 | `experiments/` | Runnable entry per paper table/figure |
+| `experiments/zkp_bulletproofs/` | Reproducible Rust crate (dalek `bulletproofs`): per-proof cost and multi-client batch verification |
 | `configs/` | YAML hyperparameters aligned with the manuscript |
 | `tests/` | Unit tests (reputation fixed point, norm bound, PBFT quorum, commitment binding) |
 | `results/figures/` | Manuscript figures (PDF) |
@@ -127,7 +133,9 @@ python experiments/run_zkp_benchmark.py    # Bulletproofs range-proof numbers
   confirmation latency, confirmation rate as the arrival rate rises (30→150
   tx/round).
 - `experiments/run_zkp_benchmark.py` — Bulletproofs range-proof micro-benchmark
-  (prove / verify latency and proof size for m = 1, 8, 32, 70 scalars).
+  (prove / verify latency and proof size for m = 1, 8, 32, 70 aggregated
+  scalars; the Rust crate adds independent-proof verification up to N = 1,000,
+  scaling linearly at ~2.71N ms and parallel across RSUs).
 - `experiments/run_main_accuracy.py` — baseline accuracy on the three datasets.
 - `experiments/run_ablation.py` — ablation under Gradient Scaling.
 - `experiments/run_mobility.py` — MAPPO mobility / client-selection study.

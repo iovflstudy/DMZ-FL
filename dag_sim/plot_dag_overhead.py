@@ -53,14 +53,14 @@ C = ['#0072B2', '#D55E00', '#009E73', '#CC79A7']
 # ============================================================
 # Engineering constants (from §5.8 Bulletproofs + IoV literature)
 # ============================================================
-PROOF_GEN_TIME     = 6.5     # ms per proof  (§5.8: 76.9s/11776 = 6.5ms)
-PROOF_VERIFY_TIME  = 3.2     # ms per proof  (§5.8: 3.2ms)
+PROOF_GEN_TIME     = 19.1    # ms per proof  (32-bit range proof, m=1)
+PROOF_VERIFY_TIME  = 2.71    # ms per proof  (32-bit range proof, m=1)
 V2I_LATENCY        = 10.0    # ms per vehicle→RSU message (DSRC/C-V2X)
 PBFT_LATENCY       = 1500.0  # ms per PBFT consensus round (M=7, reference value)
-GRADIENT_BYTES     = 512     # 128 fp32 components
-PROOF_BYTES        = 640     # Bulletproofs π: 2⌈log₂(128)⌉ = 14 group elements ≈ 448B + overhead
+COMMITMENT_BYTES   = 32      # Pedersen C_n: 1 compressed Ristretto point
+PROOF_BYTES        = 608     # 32-bit Bulletproofs range proof (14 points + scalar openings)
 METADATA_BYTES     = 92      # tx_id(4)+round(4)+vehicle_id(4)+sig(64)+padding(16) ≈ 92B
-TX_BYTES           = GRADIENT_BYTES + PROOF_BYTES + METADATA_BYTES  # ≈ 1244 bytes
+TX_BYTES           = COMMITMENT_BYTES + PROOF_BYTES + METADATA_BYTES  # = 732 bytes
 EPOCHS_PER_YEAR    = 365     # assuming 1 training epoch/day
 RSU_COUNT          = 7       # default M for PBFT
 VEHICLE_SELECTED   = 0.7     # MAPPO selects ~70% of vehicles (K/N)
@@ -331,7 +331,7 @@ print(r'\bottomrule')
 print(r'\end{tabular}')
 # Source note
 print(r'\parbox{\linewidth}{\footnotesize\raggedright '
-      r'Proof generation and verification times from \S5.8 Bulletproofs benchmarks. '
+      r'Proof generation and verification times from the Section 6.8 Bulletproofs benchmarks. '
       r'V2I latency based on DSRC/C-V2X reference values. '
       r'PBFT consensus latency (1500~ms, $M=7$) sourced from prior blockchain overhead measurements. '
       r'DAG confirmation wait overlaps with local training and does not add to wall-clock latency.}')
@@ -350,14 +350,14 @@ print(r'\begin{tabular}{@{}lr@{}}')
 print(r'\toprule')
 print(r'\textbf{Metric} & \textbf{Value} \\')
 print(r'\midrule')
-print(r'Gradient Payload (128 fp32) & %d bytes \\\\' % GRADIENT_BYTES)
+print(r'Pedersen Commitment $C_n$ (compressed Ristretto point) & %d bytes \\\\' % COMMITMENT_BYTES)
 print(r'Bulletproofs Proof $\\pi$ & %d bytes \\\\' % PROOF_BYTES)
 print(r'Metadata (id, round, vehicle, ECDSA sig) & %d bytes \\\\' % METADATA_BYTES)
 print(r'\textbf{Total per Transaction} & \textbf{%d bytes} \\\\' % TX_BYTES)
 print(r'\midrule')
 
 # Storage: N × TX_BYTES per round, ROUNDS rounds per epoch, EPOCHS_PER_YEAR epochs/year
-# For N=100: 100 × 1244 × 100 × 365 = 4,540,600,000 bytes ≈ 4.54 GB/year
+# For N=100: 100 x 732 x 100 x 365 = 2,671,800,000 bytes ~ 2.67 GB/year
 stor50  = 50  * TX_BYTES * ROUNDS * EPOCHS_PER_YEAR
 stor100 = 100 * TX_BYTES * ROUNDS * EPOCHS_PER_YEAR
 stor200 = 200 * TX_BYTES * ROUNDS * EPOCHS_PER_YEAR

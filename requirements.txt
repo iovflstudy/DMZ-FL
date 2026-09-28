@@ -3,7 +3,10 @@ torch>=2.2.0
 numpy>=1.24
 pyyaml>=6.0
 matplotlib>=3.7
-# ZKP (Linux/WSL only; pybulletproofs ships manylinux wheels, not Windows)
-# pybulletproofs==0.1.0.dev7
-# Simulation / plotting
 pandas>=2.0
+#
+# ZKP backend: the production Bulletproofs backend is the dalek-cryptography
+# Rust crates (bulletproofs v5 + curve25519-dalek v4, Ristretto), runnable with
+# Cargo in experiments/zkp_bulletproofs/ (`cargo run --release`). No Python ZKP
+# wheel is required; the Python pipeline calls it through a thin native
+# interface and falls back to a measured-constant mock on Windows.

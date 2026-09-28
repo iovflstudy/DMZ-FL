@@ -14,11 +14,12 @@ def vehicle_side_workflow(global_model, policy_theta, local_data):
     Output: transaction tx with Bulletproofs proof pi
 
     1. w_local = w - lr * grad(L(w; D_i)) + mu * (w_local - w)   # proximal SGD
-    2. g = w_local - w                                             # cumulative gradient
-    3. Encode g into bit-decomposed vector a via sign-magnitude
-    4. Compute Pedersen commitment C = Commit(g; r)
-    5. Generate Bulletproofs proof pi: ||g||_2 <= B AND loss_after < loss_before
-    6. Package tx = (C, pi, metadata) and broadcast to RSU cluster
+    2. g = w_local - w                                             # effective gradient
+    3. slack n = floor((B^2 - ||g||^2) * 2^32 / B^2) in [0, 2^32)
+    4. scalar Pedersen commitment C_n = Commit(n; r_n)
+    5. Bulletproofs 32-bit range proof pi: 0 <= n < 2^32  (equiv. ||g||_2 <= B)
+       (norm statement only; loss reduction / training validity is NOT proved)
+    6. broadcast tx = (C_n, pi, metadata); send (w_local, r_n) off-chain to RSUs
     """
     pass
 
@@ -32,11 +33,14 @@ def rsu_verification_pipeline(tx_pool, reputation_table):
     Output: updated global model w_new, updated reputation
 
     For each tx:
-      1. Verify ECDSA signature and timestamp freshness
-      2. Verify Bulletproofs proof pi (norm constraint + training validity)
-      3. Check policy compliance against DAG-published policy version
+      1. Verify ECDSA signature, timestamp freshness and de-duplication
+      2. Bulletproofs.Verify(pi, C_n, B); decrypt (w_local, r_n), recompute
+         g_eff and the slack n_eff, and require Commit(n_eff; r_n) == C_n and
+         ||g_eff|| <= B (binding; over-norm Gradient Scaling is rejected here)
+      3. Check policy compliance against the DAG-published policy version
       4. Update reputation: rep_i = EMA(rep_i, quality_score)
-      5. If cosine_sim(g_i, g_mean) < tau_anomaly: trigger rollback vote
+      5. Norm-preserving Sign-Flip goes to the cosine gate:
+         if cosine_sim(g_eff, g_mean) < tau_anomaly: trigger rollback vote
 
     6. Aggregation: w_new = sum(rep_i * data_i * w_i) / sum(rep_i * data_i)
     """

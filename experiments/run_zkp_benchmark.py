@@ -36,6 +36,9 @@ def main():
     print("RSU-side verification: 2.71 ms/proof; 70 clients/round -> ~190 ms,")
     print("below 7% of the 3,229 ms per-round FL latency.")
     print("Proof size grows logarithmically (608 -> 1,056 B from m=1 to m=70).")
+    print("Independent proofs (one/vehicle): total verify ~= 2.71 * N ms;")
+    print("N = 1000 -> ~2.3 s, embarrassingly parallel across RSUs.")
+    print("Exact multi-client numbers: experiments/zkp_bulletproofs/ (cargo run --release).")
 
 
 if __name__ == "__main__":

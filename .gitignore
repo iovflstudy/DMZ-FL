@@ -8,3 +8,6 @@ outputs/
 venv/
 .DS_Store
 *.egg-info/
+
+# Rust build artifacts
+target/

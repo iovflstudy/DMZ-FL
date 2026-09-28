@@ -1,0 +1,18 @@
+[package]
+name = "zkp-bulletproofs"
+version = "0.1.0"
+edition = "2021"
+description = "DMZ-FL 32-bit Bulletproofs norm-slack range proof and multi-client batch verification micro-benchmark"
+
+[dependencies]
+bulletproofs = "5"
+curve25519-dalek = { version = "4", features = ["rand_core"] }
+merlin = "3"
+rand = "0.8"
+# Force the pure-Rust fallback so clear_on_drop's build script does not invoke a C
+# compiler (needed on minimal Windows hosts without gcc/MSVC linker); this only
+# affects zeroization internals.
+clear_on_drop = { version = "0.2", features = ["no_cc"] }
+
+[profile.release]
+opt-level = 3

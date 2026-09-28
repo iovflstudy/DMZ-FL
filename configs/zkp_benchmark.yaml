@@ -1,11 +1,14 @@
-# Bulletproofs microbenchmark (independent of the 100-round accuracy run)
+# Bulletproofs micro-benchmark (independent of the 100-round accuracy run)
 backend:
-  real: "pybulletproofs on Linux/WSL"
-  mock: "fixed-latency stub on Windows for development"
+  real: "dalek-cryptography Rust bulletproofs v5 (cargo run --release in experiments/zkp_bulletproofs)"
+  mock: "fixed measured constants on Windows for development"
+curve: "Ristretto / curve25519-dalek v4"
+statement: "32-bit range proof over the quantized norm slack n"
 sweep:
-  num_clients: [10, 20, 40, 70, 100]
-  proof_aggregation: false
+  aggregated_scalars_m: [1, 8, 32, 70]          # one proof over m scalars
+  independent_proofs_N: [1, 10, 50, 70, 100, 200, 500, 1000]  # one proof/vehicle
 report:
-  prove_s: "11,776 proofs over ~168 rounds (independent cumulative microbenchmark)"
-  verify_per_round_ms: 224      # 70 proofs x 3.2 ms
-  share_of_per_round_latency: "<7%"
+  per_proof_m1: "19.1 ms prove / 2.71 ms verify / 608 B"
+  verify_per_round_ms: 190      # 70 independent proofs x 2.71 ms
+  verify_1000_clients_ms: 2300  # ~2.71 N ms, linear; embarrassingly parallel across RSUs
+  share_of_per_round_latency: "<7% of the 3,229 ms per-round FL latency"

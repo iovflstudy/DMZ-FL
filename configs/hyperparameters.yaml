@@ -23,30 +23,31 @@ datasets:
   car_hacking:
     model: MLP3
     norm_bound_B: 5.0
-    params: 9.5K
     num_classes: 4
 
-quantization:                # applied to gradient updates before the range proof
-  conv_bits: 8
-  fc_bits: 12
-  quantize_biases: false
+norm_slack:                 # 32-bit fixed-point encoding of B^2 - ||g||^2
+  slack_bits: 32            # n = floor((B^2 - ||g||^2) * 2^32 / B^2) in [0, 2^32)
 
 bulletproofs:
-  # Range proof over the quantized gradient update; no single component is revealed.
+  # 32-bit range proof over the quantized norm slack; neither n nor any
+  # gradient component is revealed. The on-chain commitment is the scalar
+  # Pedersen C_n = Commit(n, r_n); g/w_local stay on the encrypted off-channel.
+  statement: "32-bit range proof over quantized norm slack n"
+  commitment: "scalar Pedersen C_n = Commit(n, r_n), perfectly hiding"
   norm_bound: "model-adaptive (CNN2=15, MLP3=5)"
-  curve: Ristretto / curve25519-dalek
-  library: "pybulletproofs==0.1.0.dev7 (PyO3 binding of dalek-cryptography Rust bulletproofs)"
+  curve: "Ristretto / curve25519-dalek v4"
+  library: "dalek-cryptography Rust bulletproofs v5 (experiments/zkp_bulletproofs), thin native interface"
   trusted_setup: false
-  proof_aggregation: false    # per-client proof; batching config reported in Table
+  proof_aggregation: "m=1 deployed; m-sweep reported in the micro-benchmark table"
   measured:
-    prove_ms_per_proof: 6.5
-    verify_ms_per_proof: 3.2
-    proof_bytes: 640          # TODO: confirm against dalek implementation on Linux
+    prove_ms_per_proof: 19.1
+    verify_ms_per_proof: 2.71
+    proof_bytes: 608
   transaction_bytes:
     commitment: 32
-    proof: 640
+    proof: 608
     metadata: 92
-    total: 764                # w_local is OFF-chain, not included
+    total: 732               # w_local and r_n are OFF-chain, not included
 
 dag:
   mcmc_walk_steps: 10        # L

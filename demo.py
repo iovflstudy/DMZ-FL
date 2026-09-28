@@ -75,7 +75,7 @@ def demo_ledger():
     print("forgery prob @ K=10      : %.2e" % tangle.forgery_prob(10))
     print("forgery prob @ K_final=60: %.2e" % tangle.forgery_prob(60))
     tx_per_day = 70 * 144   # 70 selected/round, 144 rounds/day
-    print("annual storage = %.2f GB/year (764 B/tx, %d tx/day)"
+    print("annual storage = %.2f GB/year (732 B/tx, %d tx/day)"
           % (annual_storage_gb(tx_per_day), tx_per_day))
 
 
