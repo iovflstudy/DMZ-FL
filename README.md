@@ -34,32 +34,14 @@ python demo.py          # no PyTorch / dataset / ZKP library required
 | `dmzfl/algorithms/` | FedAvg / FedProx / FedNova / DMZ-FL |
 | `dmzfl/models/` | CNN2 (Fashion-MNIST), MLP3 (VeReMi / Car-Hacking) |
 | `datapreprocessor/` | Dataset loaders + IID / Dirichlet non-IID partition |
-| `experiments/` | One runnable entry per paper table/figure (WIP) |
+| `experiments/` | Runnable entries: `run_dag_simulation.py` (DAG vs. block-based ledger sweep), `run_zkp_benchmark.py` (Bulletproofs range-proof micro-benchmark), plus main accuracy / ablation / mobility runners |
 | `configs/` | YAML hyperparameters aligned with the manuscript |
 | `tests/` | Unit tests (reputation fixed point, norm bound, PBFT quorum, commitment binding) |
 | `dag_sim/` | Standalone DAG overhead simulator |
 
-## Datasets
+## Datasets, backends, and baselines
 
-| Dataset | Model | Norm bound B | Link |
-|---|---|---|---|
-| Fashion-MNIST | CNN2 | 15 | https://github.com/zalandoresearch/fashion-mnist |
-| VeReMi | MLP3 | 5 | https://github.com/josephkamel/VeReMi-Dataset |
-| Car-Hacking | MLP3 | 5 | https://ocslab.hksecurity.net/Datasets/car-hacking-dataset |
-
-## Cryptography backends
-
-- Bulletproofs Python binding: https://pypi.org/project/pybulletproofs/
-- Official dalek-cryptography Rust `bulletproofs` (Ristretto, curve25519-dalek): https://github.com/dalek-cryptography/bulletproofs
-- `curve25519-dalek`: https://github.com/dalek-cryptography/curve25519-dalek
-
-## Baselines & references
-
-- FedAvg — McMahan et al., *Communication-Efficient Learning of Deep Networks from Decentralized Data*, AISTATS 2017.
-- FedProx — Li et al., Federated Optimization in Heterogeneous Networks, MLSys 2020.
-- FedNova — Wang et al., Tackling the Objective Inconsistency Problem in Heterogeneous Federated Optimization, NeurIPS 2020.
-- MAPPO-FL — Yu et al., 2024.
-- VFL-Chain — Smahi et al., *Bulletproofing Federated Learning in the V2X Environments*, Future Generation Computer Systems 2024. https://doi.org/10.1016/j.future.2024.02.012
-- BlockFL — Kim et al., 2020.
-- Bulletproofs — Bunz et al., 2018.
+See [`references/README.md`](references/README.md) for dataset links, the
+dalek-cryptography Rust Bulletproofs backend used in the micro-benchmark, and
+the baseline papers.
 
