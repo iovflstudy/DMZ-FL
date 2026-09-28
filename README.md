@@ -66,6 +66,20 @@ The confidentiality guarantee targets external DAG observers, not the authorized
 RSU consortium, which legitimately receives `w_local` off-chain to recover the
 effective gradient. Norm enforcement is publicly auditable by any RSU and
 enforced by the PBFT majority.
+## End-to-end workflow
+
+| Step | Actor | Action | Output |
+|---|---|---|---|
+| 1. Local training | Vehicle | Trains on private data using the latest policy attestation on the DAG | Local update `w_local` |
+| 2. Commit & prove | Vehicle | Builds Pedersen commitment `C = Commit(g, r)` and Bulletproofs range proof `π` certifying the norm bound `‖g‖ ≤ B` | Transaction `(C, π, H, w_global, attestations)` |
+| 3. Publish | Vehicle | Sends the transaction to the DAG; `w_local` goes over an encrypted off-chain channel to the RSU consortium | On-chain `(C, π, H, …)`; off-chain `w_local` |
+| 4. Verify | RSU consortium (PBFT) | Verifies `π`; decrypts `w_local`; recovers `g_eff = w_local − w_global`; cosine check against the current global model | Pass/fail + effective gradient |
+| 5. Append & confirm | DAG | MCMC tip selection references the tx; weight accumulates incrementally as more tx arrive; no global block | Confirmed DAG entry |
+| 6. Reputation update | RSU consortium | EMA reputation (fixed point 0.60); cosine anomalies decay reputation; warm-up for new vehicles | Updated reputation scores |
+| 7. Aggregate | RSU consortium | Weighted aggregation by reputation and data volume over verified updates | New global model `w_global` |
+| 8. Rollback | RSU consortium | If a malicious-majority / directional attack is detected, 2M/3 majority vote rolls back the round and forces ε-greedy exploration | Corrected global model |
+| 9. Policy update | RSU consortium | Joint PPO update from `(o, a, r)` trajectories; PBFT-attested new policy hash written to the DAG | New MAPPO policy version |
+| 10. Next round | Vehicles | Pull the highest-version, depth-≥5 policy attestation; repeat | Continuous FL loop |
 ## Quick start
 
 ```bash
