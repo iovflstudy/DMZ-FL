@@ -8,7 +8,6 @@ with zero-knowledge gradient-norm proofs, and closes a self-correcting defense
 loop among verification, reputation, client selection, and aggregation for
 Internet-of-Vehicles (IoV) deployments.
 
-![DMZ-FL three-layer architecture](results/figures/fig1_architecture.png)
 ## Motivation
 
 Vehicular FL lets vehicles collaboratively train models without sharing raw data,
