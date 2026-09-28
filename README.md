@@ -61,7 +61,5 @@ python demo.py          # no PyTorch / dataset / ZKP library required
 - MAPPO-FL — Yu et al., 2024.
 - VFL-Chain — Smahi et al., *Bulletproofing Federated Learning in the V2X Environments*, Future Generation Computer Systems 2024. https://doi.org/10.1016/j.future.2024.02.012
 - BlockFL — Kim et al., 2020.
-- Krum / Multi-Krum — Blanchard et al., Machine Learning with Adversaries: Byzantine Tolerant Gradient Descent, NeurIPS 2017.
-- FLTrust — Cao et al., Byzantine-Robust Federated Learning via Trust Bootstrapping, NDSS 2021.
 - Bulletproofs — Bunz et al., 2018.
 
