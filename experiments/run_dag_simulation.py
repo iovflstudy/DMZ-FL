@@ -50,7 +50,8 @@ def run_dag(w: int, seed: int) -> dict:
             if conf < N_ROUNDS:
                 confirmed += 1
                 lat.append(conf - r)
-    through = confirmed / (N_ROUNDS - delay) * 5.0   # tx / 5 rounds
+    through = confirmed / N_ROUNDS * 5.0   # tx / 5 rounds, full-horizon confirmed
+                                           # throughput (matched denominator with blockchain)
     return {
         "throughput": through,
         "lat_mean": float(np.mean(lat)),
