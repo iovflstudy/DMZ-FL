@@ -80,7 +80,7 @@ reputation:
   ema_decay: 0.95             # gamma
   reward_delta: 0.03          # delta+ on passing
   penalty_delta: -0.03        # delta- on failing
-  rollback_penalty: -0.10     # extra penalty on rollback
+  rollback_penalty: -0.10     # extra penalty on rollback (added to the -0.03 failure penalty; total delta_roll = -0.13)
   clamp: [0.0, 1.0]
   epsilon_greedy: 0.2         # exploration after rollback
   cosine_threshold: -0.3      # angle > 107.5 deg, directional poisoning detection
